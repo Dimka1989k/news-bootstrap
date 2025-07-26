@@ -3,6 +3,7 @@ import { NewsItem } from "./NewsItem";
 
 export const NewsBoard = ({ category }) => {
   const [articles, setArticles] = useState([]);
+  const [error, setError] = useState(null); 
 
   useEffect(() => {
  
