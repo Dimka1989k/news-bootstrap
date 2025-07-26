@@ -1,49 +1,40 @@
 import { useEffect, useState } from "react";
 import { NewsItem } from "./NewsItem";
 
-export const NewsBoard = ({ category }) => {
+
+export const NewsBoard = ({ category = "technology" }) => {
   const [articles, setArticles] = useState([]);
-  const [error, setError] = useState(null); 
+  const [error, setError] = useState(null);
 
+  const apiKey = import.meta.env.VITE_APP_GNEWS_API_KEY;
   useEffect(() => {
- 
-    const apiKey = import.meta.env.VITE_KEY_API;
-
     if (!apiKey) {
-      setError("API Key for NewsAPI is missing. Please set VITE_KEY_API in your environment variables.");
-      console.error("NewsBoard: API Key (VITE_KEY_API) is not set.");
+      setError("API Key for GNews is missing. Please set VITE_APP_GNEWS_API_KEY in your .env file.");
       return;
     }
 
-    let url = `https://newsapi.org/v2/top-headlines?country=us&category=${category}&apiKey=${apiKey}`;
+    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(category)}&lang=en&country=us&max=10&token=${apiKey}`;
+
 
     const fetchNews = async () => {
       try {
-        const response = await fetch(url);     
-        if (!response.ok) {
-          const errorText = await response.text(); 
-          console.error(`NewsAPI Error: Status ${response.status} - ${response.statusText}`, errorText);
-          setError(`Failed to fetch news: ${response.status} ${response.statusText}. Details: ${errorText.substring(0, 200)}...`); // Обрізати для читабельності
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok || data.errors || !Array.isArray(data.articles)) {
+          setError(`Failed to fetch news: ${data.message || "Unknown error"}`);
           return;
         }
 
-        const data = await response.json();
-        if (data.status === "ok" && Array.isArray(data.articles)) {
-          setArticles(data.articles);
-          setError(null); 
-        } else {
-       
-          console.error("NewsAPI returned unexpected data structure:", data);
-          setError("Failed to fetch news: Unexpected data from API.");
-        }
+        setArticles(data.articles);
+        setError(null);
       } catch (err) {
-        console.error("Error fetching news:", err);
-        setError(`Failed to fetch news: ${err.message}. Please check your internet connection or API key.`);
+        setError(`Failed to fetch news: ${err.message}`);
       }
     };
 
     fetchNews();
-  }, [category]); 
+  }, [category, apiKey]);
 
   return (
     <div className="mx-auto" style={{ maxWidth: 1200 }}>
@@ -57,25 +48,27 @@ export const NewsBoard = ({ category }) => {
           height="44"
         />
       </h2>
+
       {error && (
         <div className="alert alert-danger text-center" role="alert">
           {error}
         </div>
       )}
-      {!error && articles.length === 0 && !articles.loading && (
+
+      {!error && articles.length === 0 && (
         <p className="text-center text-gray-500">Loading news or missing articles...</p>
       )}
-      {!error && articles.map((news, index) => {
-        return (
+
+      {!error &&
+        articles.map((news, index) => (
           <NewsItem
             key={index}
             title={news.title}
             description={news.description}
-            src={news.urlToImage}
+            src={news.image}
             url={news.url}
           />
-        );
-      })}
+        ))}
     </div>
   );
 };
